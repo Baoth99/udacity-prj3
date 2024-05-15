@@ -134,35 +134,7 @@ stages:
                 deploymentMethod: auto     
   - stage: Auto_test
     displayName: 'Automation Testing'
-    jobs:
-      - deployment: VMDeploy
-        displayName: 'Configure VM'
-        environment: 'Test'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-              - task: Bash@3
-                inputs:
-                  targetType: 'inline'
-                  script: |
-                    #! /bin/bash
-                    sudo apt-get upgrade -y
-                    sudo apt-get update -y
-                    sudo apt-get install python3-pip -y
-                    sudo apt-get install unzip -y
-                    sudo apt-get install -y chromium-browser
-                    sudo apt-get install -y chromium-driver
-                    sudo -H pip3 install --upgrade pip
-                    pip install -U selenium
-                    echo "python version:"
-                    python3 --version 
-                    export PATH=$PATH:/usr/bin/chromedriver
-                    # agent log analytics
-                # env:  # To use secret variables in a script, we must explicitly map them as environment variables.
-                #   AZURE_LOG_ANALYTICS_ID: $(AZURE_LOG_ANALYTICS_ID)
-                #   AZURE_LOG_ANALYTICS_PRIMARY_KEY: $(AZURE_LOG_ANALYTICS_PRIMARY_KEY)
-                displayName: Configure VM
+    jobs:     
       - deployment: test_selenium
         displayName: 'Selenium Test'
         environment: 'Test'
@@ -170,6 +142,27 @@ stages:
           runOnce:
             deploy:
               steps:
+                - task: Bash@3
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      #! /bin/bash
+                      sudo apt-get upgrade -y
+                      sudo apt-get update -y
+                      sudo apt-get install python3-pip -y
+                      sudo apt-get install unzip -y
+                      sudo apt-get install -y chromium-browser
+                      sudo apt-get install -y chromium-driver
+                      sudo -H pip3 install --upgrade pip
+                      pip install -U selenium
+                      echo "python version:"
+                      python3 --version 
+                      export PATH=$PATH:/usr/bin/chromedriver
+                      # agent log analytics
+                  # env:  # To use secret variables in a script, we must explicitly map them as environment variables.
+                  #   AZURE_LOG_ANALYTICS_ID: $(AZURE_LOG_ANALYTICS_ID)
+                  #   AZURE_LOG_ANALYTICS_PRIMARY_KEY: $(AZURE_LOG_ANALYTICS_PRIMARY_KEY)
+                  displayName: Configure VM
                 - task: Bash@3
                   inputs:
                     targetType: inline
