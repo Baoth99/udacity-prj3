@@ -73,14 +73,14 @@ stages:
           environmentServiceNameAzureRM: 'baoth1-subscription'
           
       # Run Terraform Apply
-      - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
-        displayName: Terraform apply
-        inputs:
-          provider: 'azurerm'
-          command: 'apply'
-          commandOptions: '-var-file="terraform.tfvars"'
-          workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
-          environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+      # - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+      #   displayName: Terraform apply
+      #   inputs:
+      #     provider: 'azurerm'
+      #     command: 'apply'
+      #     commandOptions: '-var-file="terraform.tfvars"'
+      #     workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+      #     environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
   
   - stage: BuildApp
     jobs:
@@ -119,8 +119,6 @@ stages:
     displayName: 'Deploy To AppService' 
     jobs:
     - deployment: DeployFakeRestAPI
-      pool:                # not required for virtual machine resources
-        vmImage: 'ubuntu-latest'
       environment: 'Test'
       strategy:
         runOnce:
@@ -134,56 +132,34 @@ stages:
                 appType: webApp
                 package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
                 deploymentMethod: auto     
-#--------------------------------------------#    
-    # Postman - Install Newman    
-    # ToDo: Update the command and verify the working directory
-    # - task: CmdLine@2
-    #   displayName: Install Newman
-    #   inputs:
-    #     script: 'sudo npm install -g newman'
-    #     workingDirectory: $(System.DefaultWorkingDirectory)
-    # # Postman Data Validation Test Suite    
-    # # ToDo: Verify the working directory
-    # - task: CmdLine@2
-    #   displayName: Run Data Validation Tests
-    #   continueOnError: true
-    #   inputs:
-    #     script: 'newman run TestSuite.Data-Validation.json -e Test.environment.json --reporters cli,junit --reporter-junit-export TEST-DataValidation.xml'
-    #     workingDirectory: '$(System.DefaultWorkingDirectory)/automatedtesting/postman'
-    # # Postman Regression Test Suite    
-    # # ToDo: Verify the working directory
-    # - task: CmdLine@2
-    #   displayName: Run Regression Tests
-    #   continueOnError: true
-    #   inputs:
-    #     script: 'newman run TestSuite.Regression.json -e Test.environment.json --reporters cli,junit --reporter-junit-export TEST-Regression.xml'
-    #     workingDirectory: '$(System.DefaultWorkingDirectory)/automatedtesting/postman'
-    # # Postman - Publish Results 
-    # # ToDo: Complete the task as explained here: https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/test/publish-test-results?view=azure-devops&tabs=trx%2Cyaml#yaml-snippet
-    # - task: PublishTestResults@2
-    #   inputs:
-    #     testResultsFormat: 'JUnit'
-    #     testResultsFiles: '**/TEST-*.xml'
-    #     searchFolder:       # ToDo
-    #     mergeTestResults: true
-    #     testRunTitle:       # ToDo
-
-    # #--------------------------------------------#
-    # # Selenium (UI) Test Suite - Archive the package  
-    # # "ArchiveFiles@2" picks up the web package and archives it.
-    # - task: ArchiveFiles@2
-    #   displayName: 'Archive UI Tests'
-    #   inputs:
-    #     rootFolderOrFile: '$(System.DefaultWorkingDirectory)/automatedtesting/selenium'
-    #     includeRootFolder: false
-    #     archiveType: 'zip'
-    #     archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-uitests.zip'
-    # # Selenium Test Suite - Publish the package  
-    # - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId)-uitests.zip   # Same as the archiveFile artifact above. 
-    #   displayName: 'Upload Package'
-    #   artifact: drop-uitests
-
-    # #--------------------------------------------#    
+    - deployment: VMDeploy
+      displayName: 'Configure VM'
+      environment: 'Test'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - task: Bash@3
+              inputs:
+                targetType: 'inline'
+                script: |
+                  #! /bin/bash
+                  sudo apt-get upgrade -y
+                  sudo apt-get update -y
+                  sudo apt-get install python3-pip -y
+                  sudo apt-get install unzip -y
+                  sudo apt-get install -y chromium-browser
+                  sudo apt-get install -y chromium-driver
+                  sudo -H pip3 install --upgrade pip
+                  pip install -U selenium
+                  echo "python version:"
+                  python3 --version 
+                  export PATH=$PATH:/usr/bin/chromedriver
+                  # agent log analytics
+              # env:  # To use secret variables in a script, we must explicitly map them as environment variables.
+              #   AZURE_LOG_ANALYTICS_ID: $(AZURE_LOG_ANALYTICS_ID)
+              #   AZURE_LOG_ANALYTICS_PRIMARY_KEY: $(AZURE_LOG_ANALYTICS_PRIMARY_KEY)
+              displayName: Configure VM    
     # # FakeRestAPI - Archive
     # # ToDo: Complete the ArchiveFiles@2 task and publish step 
     # - task: ArchiveFiles@2
