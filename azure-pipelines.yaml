@@ -52,6 +52,8 @@ stages:
           secureFilePath: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
       - script: |
           ls
+          cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+          ls
       - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV4@4
         displayName: 'Terraform plan'
         inputs:
