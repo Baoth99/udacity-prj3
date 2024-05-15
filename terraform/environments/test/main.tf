@@ -37,7 +37,7 @@ module "appservice" {
   source           = "../../modules/appservice"
   location         = "${var.location}"
   application_type = "${var.application_type}"
-  resource_type    = "AppService"
+  resource_type    = "appservice"
   resource_group   = "${module.resource_group.resource_group_name}"
 }
 module "publicip" {
@@ -48,11 +48,11 @@ module "publicip" {
   resource_group   = "${module.resource_group.resource_group_name}"
 }
 
-module "vm" {
-  source = "../../modules/vm"
-  application_type     = "${var.application_type}"
-  resource_groups =  "${module.resource_group.resource_group_name}"
-  location         = "${var.location}"
-  resource_type = "vm"
-  public_ip = "${module.publicip.public_ip_address_id}"
-}
+# module "vm" {
+#   source = "../../modules/vm"
+#   application_type     = "${var.application_type}"
+#   resource_groups =  "infrastructure-rg"
+#   location         = "${var.location}"
+#   resource_type = "vm"
+#   public_ip = "${module.publicip.public_ip_address_id}"
+# }
