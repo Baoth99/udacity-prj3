@@ -114,6 +114,16 @@ stages:
             inputs:
              targetPath: $(Build.BuildId)-selenium.zip
              artifact: drop-selenium
+  - stage: DeployApp
+    displayName: 'Deploy To AppService' 
+    jobs:
+      - job: DeplpoyFakeRestAPI
+        displayName: 'DeplpoyFakeRestAPI'
+        steps:
+          - script: |
+                 ls
+    
+            
   # - stage: DeployApp
   #   displayName: 'Deploy To AppService' 
   #   jobs:
