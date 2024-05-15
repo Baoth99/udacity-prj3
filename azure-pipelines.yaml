@@ -66,20 +66,21 @@ stages:
       - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV4@4
         displayName: 'Terraform plan'
         inputs:
+          provider: 'azurerm'
           command: plan
           commandOptions: '-var-file="terraform.tfvars"'
           workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
           environmentServiceNameAzureRM: 'baoth1-subscription'
           
       # Run Terraform Apply
-      # - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
-      #   displayName: Terraform apply
-      #   inputs:
-      #     provider: 'azurerm'
-      #     command: 'apply'
-      #     commandOptions: '-var-file="terraform.tfvars"'
-      #     workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
-      #     environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+      - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+        displayName: Terraform apply
+        inputs:
+          provider: 'azurerm'
+          command: 'apply'
+          commandOptions: '-var-file="terraform.tfvars"'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+          environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
   
   - stage: BuildApp
     jobs:
@@ -114,18 +115,10 @@ stages:
             inputs:
              targetPath: $(Build.BuildId)-selenium.zip
              artifact: drop-selenium
-  # - stage: DeployApp
-  #   displayName: 'Deploy To AppService' 
-  #   jobs:
-  #     - job: DeplpoyFakeRestAPI
-  #       displayName: 'DeplpoyFakeRestAPI'
-  #       steps:
-  #         - script: |
-  #                ls
   - stage: DeployApp
     displayName: 'Deploy To AppService' 
     jobs:
-    - deployment: FakeRestAPI
+    - deployment: DeployFakeRestAPI
       pool:                # not required for virtual machine resources
         vmImage: 'ubuntu-latest'
       environment: 'Test'
@@ -133,16 +126,14 @@ stages:
         runOnce:
           deploy:
             steps:
-            - script: |
-                ls
-            # - task: AzureWebApp@1
-            #   displayName: 'Deploy Azure Web App'
-            #   inputs:
-            #     azureSubscription: '$(azureServiceConnectionId)'
-            #     appName: '$(AppServiceName)'
-            #     appType: webApp
-            #     package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
-            #     deploymentMethod: auto     
+            - task: AzureWebApp@1
+              displayName: 'Deploy Azure Web App'
+              inputs:
+                azureSubscription: '$(azureServiceConnectionId)'
+                appName: '$(AppServiceName)'
+                appType: webApp
+                package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
+                deploymentMethod: auto     
 #--------------------------------------------#    
     # Postman - Install Newman    
     # ToDo: Update the command and verify the working directory
