@@ -114,16 +114,16 @@ stages:
             inputs:
              targetPath: $(Build.BuildId)-selenium.zip
              artifact: drop-selenium
-  - stage: DeployApp
-    displayName: 'Deploy To AppService' 
-    jobs:
-    - deployment: FakeRestAPI
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-            - script: |
-                ls
+  # - stage: DeployApp
+  #   displayName: 'Deploy To AppService' 
+  #   jobs:
+  #   - deployment: FakeRestAPI
+  #     strategy:
+  #       runOnce:
+  #         deploy:
+  #           steps:
+  #           - script: |
+  #               ls
             # - task: AzureWebApp@1
             #   displayName: 'Deploy Azure Web App'
             #   inputs:
