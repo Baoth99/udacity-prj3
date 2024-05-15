@@ -172,6 +172,12 @@ stages:
                       chromedriver --version
                       cd $(Pipeline.Workspace)/drop-selenium
                       unzip -o $(Build.BuildId)-selenium.zip
+
+                      LATEST=$(wget -q -O - http://chromedriver.storage.googleapis.com/LATEST_RELEASE)
+                      wget http://chromedriver.storage.googleapis.com/$LATEST/chromedriver_linux64.zip
+                      unzip -o chromedriver_linux64.zip
+                      sudo ln -s $PWD/chromedriver /usr/local/bin/chromedriver
+
                       sudo mkdir -p /var/log/selenium
                       sudo chmod 664 /var/log/selenium
                       python3 login.py > ui-logs.log
@@ -186,7 +192,75 @@ stages:
                   inputs:
                     targetPath: '$(System.DefaultWorkingDirectory)/log/selenium/ui-logs.log'
                     artifactName: 'drop-selenium-logs'
-    
+      - job: Test_Jmeter
+        displayName: 'Test_Jmeter'
+        steps:
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                #! /bin/bash
+                sudo apt-get upgrade -y
+                sudo apt-get update -y
+                sudo apt-get install python3-pip -y
+                sudo apt-get install unzip -y
+                sudo apt-get install -y chromium-browser
+                sudo apt-get install -y chromium-driver
+                sudo -H pip3 install --upgrade pip
+                pip install -U selenium
+                echo "python version:"
+                python3 --version 
+                export PATH=$PATH:/usr/bin/chromedriver
+                # agent log analytics
+            # env:  # To use secret variables in a script, we must explicitly map them as environment variables.
+            #   AZURE_LOG_ANALYTICS_ID: $(AZURE_LOG_ANALYTICS_ID)
+            #   AZURE_LOG_ANALYTICS_PRIMARY_KEY: $(AZURE_LOG_ANALYTICS_PRIMARY_KEY)
+            displayName: Configure VM
+          - bash: |
+              sudo apt-get install openjdk-11-jre-headless -y
+              java -version
+              wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.5.tgz -O jmeter.tgz
+              tar xzvf jmeter.tgz
+              echo "####################"
+              echo "jmeter version : " 
+              apache-jmeter-5.5/bin/jmeter --version   
+              echo "####################"
+              mkdir -p log/jmeter
+              pwd
+              ls -la
+              ls '/home/vsts/work/1/s'
+            displayName: Install JMeter
+          - bash: |
+              apache-jmeter-5.5/bin/jmeter -n -t automatedtesting/jmeter/StressTest.jmx -l log/jmeter/stress-test-result.csv -e -f -o log/jmeter/stress-test-html-report -j log/jmeter/jmeter-stress-test.log
+              cat log/jmeter/jmeter-stress-test.log
+              ls '/home/vsts/work/1/s'
+              ls '/home/vsts/work/1/s/automatedtesting/jmeter'
+            displayName: JMeter stress test
+          - bash: |
+              apache-jmeter-5.5/bin/jmeter -n -t automatedtesting/jmeter/EnduranceTest.jmx -l log/jmeter/endurance-test-result.csv -e -f -o log/jmeter/endurance-test-html-report -j log/jmeter/jmeter-endurance-test.log
+              cat log/jmeter/jmeter-endurance-test.log
+            displayName: JMeter endurance test
+          - task: ArchiveFiles@2
+            displayName: Publish Stress Test Results
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/log/jmeter/stress-test-html-report'
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: '$(System.DefaultWorkingDirectory)/log/jmeter/stress-test-html-report.zip'
+              verbose: true
+          - task: ArchiveFiles@2
+            displayName: Publish Endurance Test Results
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/log/jmeter/endurance-test-html-report'
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: '$(System.DefaultWorkingDirectory)/log/jmeter/endurance-test-html-report.zip'
+              verbose: true
+          - task: PublishPipelineArtifact@1
+            displayName: Publish JMeter logs
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/log/jmeter'
+              artifact: drop-jmeter 
 #--------------------------------------------#  
 # DEPLOYMENT STAGE
 #--------------------------------------------#    
