@@ -24,7 +24,7 @@ stages:
         displayName: 'Terrafom installation'
         inputs:
           terraformVersion: '1.2.9'
-          
+
       - task: DownloadSecureFile@1
         name: Terraform_variable_file
         displayName: 
@@ -35,7 +35,7 @@ stages:
       - task: CopyFiles@2
         inputs:
           SourceFolder: $(Terraform_variable_file.secureFilePath)
-          Contents: '**' # string. Required. Contents. Default: **.
+          Contents: 'terraform.tfvars' # string. Required. Contents. Default: **.
           TargetFolder: $(System.DefaultWorkingDirectory)/terraform/environments/test
 
       - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
