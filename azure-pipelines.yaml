@@ -31,6 +31,9 @@ stages:
         inputs:
           secureFile: terraform.tfvars
           secureFilePath: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+          
+      - script: |
+          echo Installing $(Terraform_variable_file.secureFilePath) to the trusted CA directory...
 
       - task: CopyFiles@2
         inputs:
