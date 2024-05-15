@@ -3,6 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 import datetime
 
+
 def timestamp():
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return (ts + '\t')
@@ -33,8 +34,6 @@ def add_cart(driver, n_items):
         print(timestamp() + product + " added to shopping cart.") 
         driver.find_element_by_css_selector("button.inventory_details_back_button").click()  
     print(timestamp() + '{:d} items are all added to shopping cart successfully.'.format(n_items))
-
-
 
 def remove_cart(driver, n_items):
     for i in range(n_items):
