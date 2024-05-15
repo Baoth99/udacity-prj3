@@ -24,7 +24,19 @@ stages:
         displayName: 'Terrafom installation'
         inputs:
           terraformVersion: '1.2.9'
+          
+      - task: DownloadSecureFile@1
+        name: Terraform_variable_file
+        displayName: 
+        inputs:
+          secureFile: terraform.tfvars
+          secureFilePath: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
 
+      - task: CopyFiles@2
+        inputs:
+          SourceFolder: $(Terraform_variable_file.secureFilePath)
+          Contents: '**' # string. Required. Contents. Default: **.
+          TargetFolder: $(System.DefaultWorkingDirectory)/terraform/environments/test
 
       - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
         displayName: 'Terrafom init'
@@ -44,16 +56,7 @@ stages:
           provider: 'azurerm'
           command: 'validate'
           workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
-      - task: DownloadSecureFile@1
-        name: Terraform_variable_file
-        displayName: 
-        inputs:
-          secureFile: terraform.tfvars
-          secureFilePath: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
-      - script: |
-          ls
-          cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-          ls
+
       - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV4@4
         displayName: 'Terraform plan'
         inputs:
