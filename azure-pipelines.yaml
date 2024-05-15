@@ -18,7 +18,7 @@ variables:
     value: udacity-prj03-app-appservice
 
 stages:     
-  - stage: Build_Infrastructure
+  - stage: BuildInfrastructure
     jobs:
     - job: Build
       displayName: 'Build Azure Infrastructure'
@@ -81,42 +81,57 @@ stages:
       #     workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
       #     environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
   
-  - stage: Auto_Testing
+  - stage: BuildApp
     jobs:
-      - job: Install_Newman
-        displayName: 'Build FakeApi'
+      - job: Build
+        displayName: 'Build FakeRestAPI'
         steps:
-          - task: CmdLine@2
-            displayName: Install Newman
+          - task: ArchiveFiles@2
+            displayName: Archive FakeRestAPI
             inputs:
-              script: 'sudo npm install -g newman'
-              workingDirectory: $(System.DefaultWorkingDirectory)
-          # Postman Data Validation Test Suite    
-          # ToDo: Verify the working directory
-          - task: CmdLine@2
-            displayName: Run Data Validation Tests
-            continueOnError: true
-            inputs:
-              script: 'newman run TestSuite.Data-Validation.json -e Test.environment.json --reporters cli,junit --reporter-junit-export TEST-DataValidation.xml'
-              workingDirectory: '$(System.DefaultWorkingDirectory)/automatedtesting/postman'
-          # Postman Regression Test Suite    
-          # ToDo: Verify the working directory
-          - task: CmdLine@2
-            displayName: Run Regression Tests
-            continueOnError: true
-            inputs:
-              script: 'newman run TestSuite.Regression.json -e Test.environment.json --reporters cli,junit --reporter-junit-export TEST-Regression.xml'
-              workingDirectory: '$(System.DefaultWorkingDirectory)/automatedtesting/postman'
-          # Postman - Publish Results 
-          # ToDo: Complete the task as explained here: https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/test/publish-test-results?view=azure-devops&tabs=trx%2Cyaml#yaml-snippet
-          - task: PublishTestResults@2
-            inputs:
-              testResultsFormat: 'JUnit'
-              testResultsFiles: '**/TEST-*.xml'
-              searchFolder:       # ToDo
-              mergeTestResults: true
-              testRunTitle:       # ToDo
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/fakerestapi'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.BuildId)-fakerestapi.zip'
 
+          - task: PublishPipelineArtifact@1
+            displayName: Upload package
+            inputs:   
+              targetPath: $(Build.BuildId)-fakerestapi.zip
+              artifact: drop-fakerestapi
+
+          - task: ArchiveFiles@2
+            displayName: Archive Selenium
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/automatedtesting/selenium'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.BuildId)-selenium.zip'
+              replaceExistingArchive: true
+            
+          - task: PublishPipelineArtifact@1
+            displayName: Upload Selenium
+            inputs:
+             targetPath: $(Build.BuildId)-selenium.zip
+             artifact: drop-selenium
+  - stage: DeployApp
+    displayName: 'Deploy To AppService' 
+    jobs:
+    - deployment: FakeRestAPI
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - script: |
+                ls
+            # - task: AzureWebApp@1
+            #   displayName: 'Deploy Azure Web App'
+            #   inputs:
+            #     azureSubscription: '$(azureServiceConnectionId)'
+            #     appName: '$(AppServiceName)'
+            #     appType: webApp
+            #     package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
+            #     deploymentMethod: auto     
 #--------------------------------------------#    
     # Postman - Install Newman    
     # ToDo: Update the command and verify the working directory
