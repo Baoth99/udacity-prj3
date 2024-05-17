@@ -1,0 +1,344 @@
+name: Azure Pipelines
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: AzureConfig
+  - name: python.version
+    value: 3.7.6
+  - name: azureServiceConnectionId
+    value: baoth1-subscription
+  - name: environmentName
+    value: test
+  - name: AppServiceName
+    value: udacity-prj03-app-appservice
+
+stages:     
+  - stage: BuildInfrastructure
+    jobs:
+    - job: Build
+      displayName: 'Build Azure Infrastructure'
+      steps:
+      - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+        displayName: 'Terrafom installation'
+        inputs:
+          terraformVersion: '1.2.9'
+
+      - task: DownloadSecureFile@1
+        name: Terraform_variable_file
+        displayName: 'DownloadSecureFile'
+        inputs:
+          secureFile: terraform.tfvars
+
+      - script: |
+          echo Installing $(Terraform_variable_file.secureFilePath) to the trusted CA directory...
+
+      - task: CopyFiles@2
+        displayName: 'CopyFiles'
+        inputs:
+          SourceFolder: "$(Agent.TempDirectory)"
+          Contents: '**/terraform.tfvars' # string. Required. Contents. Default: **.
+          TargetFolder: $(System.DefaultWorkingDirectory)/terraform/environments/test
+
+      - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+        displayName: 'Terrafom init'
+        inputs:
+          provider: 'azurerm'
+          command: 'init'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+          backendServiceArm: '$(azureServiceConnectionId)'
+          backendAzureRmResourceGroupName: '$(resource_group)'
+          backendAzureRmStorageAccountName: '$(storage_account_name)'
+          backendAzureRmContainerName: '$(container_name)'
+          backendAzureRmKey: '$(key)'
+
+      - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+        displayName: Terraform validate
+        inputs:
+          provider: 'azurerm'
+          command: 'validate'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+
+      - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV4@4
+        displayName: 'Terraform plan'
+        inputs:
+          provider: 'azurerm'
+          command: plan
+          commandOptions: '-var-file="terraform.tfvars"'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+          environmentServiceNameAzureRM: 'baoth1-subscription'
+          
+      # Run Terraform Apply
+      # - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+      #   displayName: Terraform apply
+      #   inputs:
+      #     provider: 'azurerm'
+      #     command: 'apply'
+      #     commandOptions: '-var-file="terraform.tfvars"'
+      #     workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+      #     environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+  
+  - stage: Build
+    jobs:
+      - job: Build
+        displayName: 'Build FakeRestAPI'
+        steps:
+          - task: ArchiveFiles@2
+            displayName: Archive FakeRestAPI
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/fakerestapi'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.BuildId)-fakerestapi.zip'
+
+          - task: PublishPipelineArtifact@1
+            displayName: Upload package
+            inputs:   
+              targetPath: $(Build.BuildId)-fakerestapi.zip
+              artifact: drop-fakerestapi
+
+          - task: ArchiveFiles@2
+            displayName: Archive Selenium
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/automatedtesting/selenium'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.BuildId)-selenium.zip'
+              replaceExistingArchive: true
+            
+          - task: PublishPipelineArtifact@1
+            displayName: Upload Selenium
+            inputs:
+             targetPath: $(Build.BuildId)-selenium.zip
+             artifact: drop-selenium
+  - stage: DeployApp
+    displayName: 'Deploy To AppService' 
+    jobs:
+    - deployment: DeployFakeRestAPI
+      environment: 'Test'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - task: AzureWebApp@1
+              displayName: 'Deploy Azure Web App'
+              inputs:
+                azureSubscription: '$(azureServiceConnectionId)'
+                appName: '$(AppServiceName)'
+                appType: webApp
+                package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
+                deploymentMethod: auto     
+  - stage: Auto_test
+    displayName: 'Automation Testing'
+    jobs:     
+      - deployment: test_selenium
+        displayName: 'Selenium Test'
+        environment: 'Test'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: Bash@3
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      #! /bin/bash
+                      sudo apt-get upgrade -y
+                      sudo apt-get update -y
+                      sudo apt-get install python3-pip -y
+                      sudo apt-get install unzip -y
+                      sudo apt-get install -y chromium-browser
+                      sudo apt-get install -y chromium-driver
+                      sudo -H pip3 install --upgrade pip
+                      pip install -U selenium
+                      echo "python version:"
+                      python3 --version 
+                      export PATH=$PATH:/usr/bin/chromedriver
+                      # agent log analytics
+                  # env:  # To use secret variables in a script, we must explicitly map them as environment variables.
+                  #   AZURE_LOG_ANALYTICS_ID: $(AZURE_LOG_ANALYTICS_ID)
+                  #   AZURE_LOG_ANALYTICS_PRIMARY_KEY: $(AZURE_LOG_ANALYTICS_PRIMARY_KEY)
+                  displayName: Configure VM
+                - task: Bash@3
+                  inputs:
+                    targetType: inline
+                    script: |
+                      #!/bin/bash
+                      chromium-browser -version
+                      chromedriver --version
+                      cd $(Pipeline.Workspace)/drop-selenium
+                      unzip -o $(Build.BuildId)-selenium.zip
+
+                      LATEST=$(wget -q -O - http://chromedriver.storage.googleapis.com/LATEST_RELEASE)
+                      wget http://chromedriver.storage.googleapis.com/$LATEST/chromedriver_linux64.zip
+                      unzip -o chromedriver_linux64.zip
+                      sudo ln -s $PWD/chromedriver /usr/local/bin/chromedriver
+
+                      sudo mkdir -p /var/log/selenium
+                      sudo chmod 664 /var/log/selenium
+                      python3 login.py > ui-logs.log
+                      python3 login.py
+                      sudo mv ui-logs.log /var/log/selenium
+                      cd $(System.DefaultWorkingDirectory)
+                      mkdir -p log/selenium
+                      sudo cp /var/log/selenium/ui-logs.log log/selenium
+
+                - task: PublishPipelineArtifact@1
+                  displayName: Publish selenium logs
+                  inputs:
+                    targetPath: '$(System.DefaultWorkingDirectory)/log/selenium/ui-logs.log'
+                    artifactName: 'drop-selenium-logs'
+      - job: Test_Jmeter
+        displayName: 'Test_Jmeter'
+        steps:
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                #! /bin/bash
+                sudo apt-get upgrade -y
+                sudo apt-get update -y
+                sudo apt-get install python3-pip -y
+                sudo apt-get install unzip -y
+                sudo apt-get install -y chromium-browser
+                sudo apt-get install -y chromium-driver
+                sudo -H pip3 install --upgrade pip
+                pip install -U selenium
+                echo "python version:"
+                python3 --version 
+                export PATH=$PATH:/usr/bin/chromedriver
+                # agent log analytics
+            # env:  # To use secret variables in a script, we must explicitly map them as environment variables.
+            #   AZURE_LOG_ANALYTICS_ID: $(AZURE_LOG_ANALYTICS_ID)
+            #   AZURE_LOG_ANALYTICS_PRIMARY_KEY: $(AZURE_LOG_ANALYTICS_PRIMARY_KEY)
+            displayName: Configure VM
+          - bash: |
+              sudo apt-get install openjdk-11-jre-headless -y
+              java -version
+              wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.5.tgz -O jmeter.tgz
+              tar xzvf jmeter.tgz
+              echo "####################"
+              echo "jmeter version : " 
+              apache-jmeter-5.5/bin/jmeter --version   
+              echo "####################"
+              mkdir -p log/jmeter
+              pwd
+              ls -la
+              ls '/home/vsts/work/1/s'
+            displayName: Install JMeter
+          - bash: |
+              apache-jmeter-5.5/bin/jmeter -n -t automatedtesting/jmeter/StressTest.jmx -l log/jmeter/stress-test-result.csv -e -f -o log/jmeter/stress-test-html-report -j log/jmeter/jmeter-stress-test.log
+              cat log/jmeter/jmeter-stress-test.log
+              ls '/home/vsts/work/1/s'
+              ls '/home/vsts/work/1/s/automatedtesting/jmeter'
+            displayName: JMeter stress test
+          - bash: |
+              apache-jmeter-5.5/bin/jmeter -n -t automatedtesting/jmeter/EnduranceTest.jmx -l log/jmeter/endurance-test-result.csv -e -f -o log/jmeter/endurance-test-html-report -j log/jmeter/jmeter-endurance-test.log
+              cat log/jmeter/jmeter-endurance-test.log
+            displayName: JMeter endurance test
+          - task: ArchiveFiles@2
+            displayName: Publish Stress Test Results
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/log/jmeter/stress-test-html-report'
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: '$(System.DefaultWorkingDirectory)/log/jmeter/stress-test-html-report.zip'
+              verbose: true
+          - task: ArchiveFiles@2
+            displayName: Publish Endurance Test Results
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/log/jmeter/endurance-test-html-report'
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: '$(System.DefaultWorkingDirectory)/log/jmeter/endurance-test-html-report.zip'
+              verbose: true
+          - task: PublishPipelineArtifact@1
+            displayName: Publish JMeter logs
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/log/jmeter'
+              artifact: drop-jmeter 
+#--------------------------------------------#  
+# DEPLOYMENT STAGE
+#--------------------------------------------#    
+# - stage: Deploy
+#   jobs:
+#   #--------------------------------------------#  
+#   # Deploy FakeRestAPI Web App
+#   # ToDo: Provide <environment name> you created in your DevOps project
+#   - deployment: FakeRestAPI
+#     pool:
+#       vmImage: 'Ubuntu-18.04'      
+#     environment: <environment name>   # ToDo
+#     strategy:
+#       runOnce:
+#         deploy:
+#           steps:
+#           - task: AzureWebApp@1
+#             displayName: 'Deploy Azure Web App'
+#             inputs:
+#               azureSubscription: ''     # ToDo
+#               appName: ''               # ToDo
+#               appType: webApp
+#               package: $(Pipeline.Workspace)/<artifact>/<archiveFile>       # ToDo: Use the published zip artifact. 
+#           #--------------------------------------------#    
+#           # Run JMeter test suite against the App Service
+#           - task: CmdLine@2
+#             inputs:
+#               script: |
+#                 wget "https://apache.mirrors.lucidnetworks.net//jmeter/binaries/apache-jmeter-5.2.1.tgz"
+#                 tar -xf apache-jmeter-5.2.1.tgz
+#                 unzip -o $(Build.BuildId)-perftests.zip
+#                 ./apache-jmeter-5.2.1/bin/jmeter -n -t PerformanceTestSuite.jmx -j jmeter.log -f
+#                 cat jmeter.log                                                                           # ToDo: Write your commands
+#               workingDirectory: $(Pipeline.Workspace)/<artifact>            # ToDo: Use the artifact name from the task above
+              
+  #--------------------------------------------#  
+  # Selenium | Functional UI Tests
+  # ToDo: 
+  # - deployment: VMDeploy
+  #   displayName: Selenium Tests
+  #   environment:
+  #     name:         # ToDo: Change/provide a name
+  #     resourceType: VirtualMachine
+  #     tags: selenium
+  #   strategy:
+  #     runOnce:
+  #       deploy:
+  #         steps:
+  #         - download: current
+  #           artifact: drop-ui-tests     # ToDo: Change/provide a name
+            
+  #         - task: Bash@3
+  #           inputs:
+  #             targetType: 'inline'
+  #             script: |           
+  #               #! /bin/bash
+                
+  #               sudo apt-get upgrade -y
+  #               sudo apt-get install python3-pip -y
+  #               sudo apt-get install unzip -y
+  #               sudo apt-get install -y chromium-browser
+  #               pip3 install selenium
+  #               cd ~/
+  #               DIR=/home/testuser/app
+  #               if [ ! -d "$DIR" ]; then
+  #                   mkdir app
+  #               fi
+  #               mv /home/testuser/azagent/_work/1/drop-uitests/$(Build.BuildId)-uitests.zip app
+  #               cd app
+  #               unzip -o $(Build.BuildId)-uitests.zip
+  #               FILE=/home/testuser/app/chromedriver_linux64.zip
+  #               if [ ! -f "$FILE" ]; then
+  #                   LATEST=$(wget -q -O - http://chromedriver.storage.googleapis.com/LATEST_RELEASE)
+  #                   wget http://chromedriver.storage.googleapis.com/$LATEST/chromedriver_linux64.zip
+  #                   unzip -o chromedriver_linux64.zip
+  #                   sudo ln -s $PWD/chromedriver /usr/local/bin/chromedriver
+  #               fi
+  #               export PATH=$PATH:/home/testuser/app
+  #               echo "Starting Selenium Tests"
+  #               python3 add_remove_from_cart.py >> selenium.log
+  #               echo "Completed Selenium Tests. Check selenium.log for results."
