@@ -17,7 +17,7 @@ stages:
     - job: TerraformTasks
       displayName: Terraform
       pool:
-        vmImage: 'ubuntu-18.04'
+        vmImage: 'ubuntu-latest'
       steps:
       - task: DownloadSecureFile@1
         name: terraform
@@ -88,7 +88,7 @@ stages:
     jobs:
     - job: Build
       pool:
-         vmImage: 'ubuntu-18.04'
+         vmImage: 'ubuntu-latest'
       steps:
       - task: ArchiveFiles@2
         displayName: Archive FakeRestAPI
@@ -124,7 +124,7 @@ stages:
     jobs:
     - deployment: FakeRestAPI
       pool:
-        vmImage: 'Ubuntu-18.04'
+        vmImage: 'ubuntu-latest'
       environment: 'Test'
       strategy:
         runOnce:
@@ -202,7 +202,7 @@ stages:
       - job: Test_Jmeter
         displayName: Performance testing
         pool:
-          vmImage: 'ubuntu-18.04'
+          vmImage: 'ubuntu-latest'
         steps:
           - bash: |
               sudo apt-get install openjdk-11-jre-headless -y
@@ -253,7 +253,7 @@ stages:
       - job: Test_Post_man
         displayName: Postman Test
         pool:
-            vmImage: 'ubuntu-18.04'
+            vmImage: 'ubuntu-latest'
         steps: 
           - task: NodeTool@0
             displayName: Install Node v14.X
