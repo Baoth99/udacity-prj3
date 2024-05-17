@@ -38,12 +38,12 @@ stages:
           script: cp $(Agent.TempDirectory)/terraform.tfvars $(System.DefaultWorkingDirectory)/terraform
 
       # Needed for Terraform VM deployment
-      - task: InstallSSHKey@0
-        displayName: Key for SSH to VM
-        inputs:
-          knownHostsEntry: '$(knownHostsEntry)'
-          sshPublicKey: '$(sshPublicKey)'
-          sshKeySecureFile: 'id_rsa'
+      # - task: InstallSSHKey@0
+      #   displayName: Key for SSH to VM
+      #   inputs:
+      #     knownHostsEntry: '$(knownHostsEntry)'
+      #     sshPublicKey: '$(sshPublicKey)'
+      #     sshKeySecureFile: 'id_rsa'
 
 
       - task: TerraformTaskV2@2
