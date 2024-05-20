@@ -118,12 +118,6 @@ stages:
          targetPath: $(Build.BuildId)-selenium.zip
          artifact: drop-selenium
 
-      - task: PublishPipelineArtifact@1
-        displayName: Upload package
-        inputs:   
-          targetPath: '$(System.DefaultWorkingDirectory)/automatedtesting/postman'
-          artifact: drop-postmancollection
-
 
   - stage: DeployApp
     displayName: Deploy App to App Service
