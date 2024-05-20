@@ -262,7 +262,7 @@ stages:
           - task: NodeTool@0
             displayName: Install Node v14.X
             inputs:
-              versionSpec: '14.x'
+              versionSpec: '18.x'
           - bash: |
               node -v
               sudo npm install -g newman
