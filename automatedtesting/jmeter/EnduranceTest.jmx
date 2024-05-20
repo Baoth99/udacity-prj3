@@ -211,7 +211,7 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="hostname" elementType="Argument">
             <stringProp name="Argument.name">hostname</stringProp>
-            <stringProp name="Argument.value">udacity-thoanvtt-project03-app-appservice.azurewebsites.net</stringProp>
+            <stringProp name="Argument.value">udacity-prj03-app-appservice.azurewebsites.net/</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="protocol" elementType="Argument">
