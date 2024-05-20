@@ -118,6 +118,12 @@ stages:
          targetPath: $(Build.BuildId)-selenium.zip
          artifact: drop-selenium
 
+      - task: PublishPipelineArtifact@1
+        displayName: Upload package
+        inputs:   
+          targetPath: '$(System.DefaultWorkingDirectory)/automatedtesting/postman'
+          artifact: drop-postmancollection
+
 
   - stage: DeployApp
     displayName: Deploy App to App Service
@@ -260,9 +266,11 @@ stages:
             vmImage: 'ubuntu-latest'
         steps: 
           - task: NodeTool@0
-            displayName: Install Node v14.X
+            displayName: Install Node v18.X
             inputs:
               versionSpec: '18.x'
+          - bash: |
+              ls
           - bash: |
               node -v
               sudo npm install -g newman
