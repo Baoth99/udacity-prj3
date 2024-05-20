@@ -272,10 +272,10 @@ stages:
               newman -v
             displayName: Install Newman CLI
           - bash: |
-                newman run automatedtesting/postman/udacity-project3-ReTest.postman_collection.json -e automatedtesting/postman/Env.RegressionTest.postman_environment.json --reporters cli,junit --reporter-junit-export log/newman/RegressionTest.xml --suppress-exit-code
+                newman run $(System.DefaultWorkingDirectory)/automatedtesting/postman/udacity-project3-ReTest.postman_collection.json -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/Env.RegressionTest.postman_environment.json --reporters cli,junit --reporter-junit-export log/newman/RegressionTest.xml --suppress-exit-code
             displayName: Run Regression Test
           - bash: |
-                newman run automatedtesting/postman/udacity-project3-ValTest.postman_collection.json -e automatedtesting/postman/Env.ValidationTest.postman_environment.json --reporters cli,junit --reporter-junit-export log/newman/ValidationTest.xml --suppress-exit-code
+                newman run $(System.DefaultWorkingDirectory)/automatedtesting/postman/udacity-project3-ValTest.postman_collection.json -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/Env.ValidationTest.postman_environment.json --reporters cli,junit --reporter-junit-export log/newman/ValidationTest.xml --suppress-exit-code
             displayName: Run Validation Test
           - task: PublishPipelineArtifact@1
             displayName: Publish Newman logs
