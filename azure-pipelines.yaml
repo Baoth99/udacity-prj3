@@ -159,7 +159,7 @@ stages:
                   sudo apt-get install unzip -y
                   sudo apt-get install -y chromium-browser
                   sudo apt-get install -y chromium-driver
-                  sudo -H pip3 install --upgrade pip
+                  sudo -H pip3 install --upgrade requests
                   pip install -U selenium
                   echo "python version:"
                   python3 --version 
