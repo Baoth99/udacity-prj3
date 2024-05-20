@@ -141,7 +141,9 @@ stages:
 
     - deployment: VMDeploy
       displayName: VMDeploy
-      environment: 'Test'
+      environment: 
+        name: 'Test'
+        resourceType: VirtualMachine
       strategy:
         runOnce:
           deploy:
@@ -171,7 +173,9 @@ stages:
     jobs:
       - deployment: test_on_vm
         displayName: UI testing
-        environment: 'Test'
+        environment: 
+          name: 'Test'
+          resourceType: VirtualMachine
         strategy:
           runOnce:
             deploy:
