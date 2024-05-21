@@ -63,6 +63,10 @@ stages:
           command: 'plan'
           workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
           environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+
+      - script: |
+          ls
+        displayName: Terraform Apply
       # - task: TerraformTaskV2@2
       #   displayName: Terraform Apply
       #   inputs:
@@ -72,7 +76,6 @@ stages:
       #       -auto-approve
       #     workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
       #     environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
-
 
   - stage: Build
     jobs:
