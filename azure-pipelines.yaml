@@ -187,7 +187,7 @@ stages:
                     cd $(System.DefaultWorkingDirectory)
                     mkdir -p log/selenium
                     sudo cp /var/log/selenium/ui-logs.log log/selenium
-                    sudo cp /var/log/selenium/ui-logs.log /home/vm01admin/log
+                    sudo cp /var/log/selenium/ui-logs.log /home/logs
                 - task: PublishPipelineArtifact@1
                   displayName: Publish selenium logs
                   inputs:
