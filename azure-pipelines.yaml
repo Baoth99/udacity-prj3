@@ -64,18 +64,15 @@ stages:
           workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
           environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
-      - script: |
-          ls
+      - task: TerraformTaskV2@2
         displayName: Terraform Apply
-      # - task: TerraformTaskV2@2
-      #   displayName: Terraform Apply
-      #   inputs:
-      #     provider: 'azurerm'
-      #     command: 'apply'
-      #     commandOptions: |
-      #       -auto-approve
-      #     workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
-      #     environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+        inputs:
+          provider: 'azurerm'
+          command: 'apply'
+          commandOptions: |
+            -auto-approve
+          workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+          environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
   - stage: Build
     jobs:
